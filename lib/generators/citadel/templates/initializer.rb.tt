@@ -1,0 +1,21 @@
+# frozen_string_literal: true
+
+Citadel.configure do |config|
+  # :schema isolates each realm in a PostgreSQL schema
+  config.isolation = :schema
+
+  # Realm used when no gatekeeper match is found
+  config.default_realm = "public"
+
+  # Schemas included in every realm's search_path (e.g. PG extensions)
+  config.persistent_schemas = %w[shared_extensions]
+
+  # Callable returning realm names to manage (create, migrate, seed)
+  config.realms = -> { [] }
+
+  # Rack gatekeeper: :subdomain, a Citadel::Gatekeepers class, or nil
+  config.gatekeeper = :subdomain
+
+  # Run citadel:migrate after db:migrate
+  config.migrate_all_realms = true
+end

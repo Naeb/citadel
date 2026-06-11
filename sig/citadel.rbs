@@ -1,4 +1,75 @@
 module Citadel
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  class Error < StandardError
+  end
+
+  class RealmNotFound < Error
+  end
+
+  class ConfigurationError < Error
+  end
+
+  class MissingRealmError < Error
+  end
+
+  class InvalidSchemaNameError < Error
+  end
+
+  def self.configure: () { (Config) -> void } -> Config
+  def self.config: () -> Config
+  def self.activate!: () -> void
+
+  class Config
+    attr_accessor isolation: Symbol
+    attr_accessor default_realm: String
+    attr_accessor persistent_schemas: Array[String]
+    attr_accessor realms: ^() -> Array[untyped]
+    attr_accessor gatekeeper: (Symbol | Class | nil)
+    attr_accessor migrate_all_realms: bool
+
+    def configure: () { (Config) -> void } -> Config
+    def foundation_models: () -> Array[String]
+    def register_foundation_model: (String | Class) -> void
+    def foundation_model?: (Class) -> bool
+    def apply_defaults!: () -> void
+    def validate!: () -> void
+    def freeze!: () -> void
+    def frozen?: () -> bool
+  end
+
+  class Presence < ActiveSupport::CurrentAttributes
+    def self.realm: () -> String?
+    def self.realm=: (String?) -> String?
+    def self.previous_realm: () -> String?
+    def self.previous_realm=: (String?) -> String?
+  end
+
+  module Realm
+    def self.enter: (String realm) { () -> untyped } -> untyped
+    def self.current: () -> String
+    def self.reset!: () -> void
+    def self.require_presence!: () -> void
+    def self.names: () -> Array[String]
+    def self.each: () { (String) -> void } -> void
+    def self.create: (String name) -> void
+    def self.drop: (String name) -> void
+    def self.migrate: (?String? name) -> void
+    def self.seed: (?String? name) -> void
+  end
+
+  module Foundation
+    include ActiveSupport::Concern
+  end
+
+  module Gatekeepers
+    class Generic
+      def initialize: (untyped app) -> void
+      def call: (Hash env) -> untyped
+    end
+
+    class Subdomain
+      include Generic
+    end
+  end
 end
