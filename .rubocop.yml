@@ -4,6 +4,7 @@ AllCops:
   Exclude:
     - "gemfiles/**/*"
     - "spec/dummy/**/*"
+    - "vendor/**/*"
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes

@@ -19,7 +19,7 @@ jobs:
           bundler: "4.0.3"
           bundler-cache: true
 
-      - run: bundle exec rubocop
+      - run: bundle exec rubocop lib spec Appraisals Rakefile Gemfile citadel.gemspec
 
   test:
     runs-on: ubuntu-latest
