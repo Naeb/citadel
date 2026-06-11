@@ -70,7 +70,7 @@ jobs:
 
       - name: Prepare dummy database
         run: |
-          bundle exec appraisal ${{ matrix.rails }} exec bash -ec '
+          bundle exec appraisal ${{ matrix.rails }} bash -ec '
             cd spec/dummy
             bundle config set --local frozen false
             bundle lock --update rails
