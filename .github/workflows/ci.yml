@@ -69,8 +69,15 @@ jobs:
         run: bundle exec appraisal ${{ matrix.rails }} bundle install
 
       - name: Prepare dummy database
+        env:
+          BUNDLE_GEMFILE: spec/dummy/Gemfile
+          RAILS_ENV: test
         run: |
-          bundle exec appraisal ${{ matrix.rails }} bash -lc "cd spec/dummy && bundle config set --local frozen false && bundle lock --update rails && bundle install && bundle exec rake db:prepare"
+          cd spec/dummy
+          bundle config set --local frozen false
+          bundle lock --update rails
+          bundle install
+          bundle exec rake db:prepare
 
       - name: Run RSpec
         run: bundle exec appraisal ${{ matrix.rails }} rspec
