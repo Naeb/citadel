@@ -44,7 +44,11 @@ jobs:
           bundler-cache: true
 
       - name: Install Rails ${{ matrix.rails }}
-        run: bundle update rails activerecord activesupport --conservative
+        env:
+          BUNDLE_FROZEN: "false"
+        run: |
+          bundle config set --local frozen false
+          bundle update rails activerecord activesupport --conservative
 
       - name: Prepare dummy database
         run: |
