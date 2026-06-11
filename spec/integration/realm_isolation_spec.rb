@@ -2,18 +2,26 @@
 
 require "spec_helper"
 
-ENV["RAILS_ENV"] = "test"
-ENV["BUNDLE_GEMFILE"] = File.expand_path("../dummy/Gemfile", __dir__)
-
-require File.expand_path("../dummy/config/environment", __dir__)
-
 RSpec.describe "Citadel integration", type: :integration do
   before(:all) do
+    @previous_dir = Dir.pwd
+    dummy_root = File.expand_path("../dummy", __dir__)
+    ENV["RAILS_ENV"] = "test"
+    ENV["BUNDLE_GEMFILE"] = File.join(dummy_root, "Gemfile")
+
+    Dir.chdir(dummy_root) do
+      require File.expand_path("config/environment", dummy_root)
+    end
+
     skip "PostgreSQL not available" unless pg_available?
 
     reset_schemas!
     migrate_public!
     create_and_migrate_realms!
+  end
+
+  after(:all) do
+    Dir.chdir(@previous_dir) if @previous_dir
   end
 
   after(:each) do
@@ -56,6 +64,54 @@ RSpec.describe "Citadel integration", type: :integration do
     expect(gondor_pool).not_to eq(rohan_pool)
   end
 
+  it "creates schema_migrations in each realm schema during migrate" do
+    expect(schema_migrations_table_exists?("gondor")).to be(true)
+    expect(schema_migrations_table_exists?("rohan")).to be(true)
+    expect(schema_migrations_table_exists?("public")).to be(true)
+  end
+
+  it "bootstraps schema_migrations when migrating a freshly created realm" do
+    conn = ActiveRecord::Base.connection
+    conn.execute("DROP SCHEMA IF EXISTS erebor CASCADE")
+    Citadel::Realm.create("erebor")
+
+    expect(schema_migrations_table_exists?("erebor")).to be(false)
+
+    Citadel::Realm.migrate("erebor")
+
+    expect(schema_migrations_table_exists?("erebor")).to be(true)
+  ensure
+    conn.execute("DROP SCHEMA IF EXISTS erebor CASCADE")
+  end
+
+  it "uses the target realm search path even when another realm is active" do
+    Citadel::Realm.enter("gondor") do
+      Citadel::Realm.enter("rohan") do
+        search_path = ActiveRecord::Base.connection.select_value("SHOW search_path")
+
+        expect(search_path).to include("rohan")
+        expect(search_path).not_to start_with("gondor")
+      end
+    end
+  end
+
+  it "tracks migration versions independently per realm" do
+    gondor_versions = versions_in_schema("gondor")
+    rohan_versions = versions_in_schema("rohan")
+
+    expect(gondor_versions).not_to be_empty
+    expect(rohan_versions).to eq(gondor_versions)
+
+    conn = ActiveRecord::Base.connection
+    conn.execute("INSERT INTO gondor.schema_migrations (version) VALUES ('99999999999999')")
+
+    expect(versions_in_schema("gondor")).to include("99999999999999")
+    expect(versions_in_schema("rohan")).not_to include("99999999999999")
+  ensure
+    conn = ActiveRecord::Base.connection
+    conn.execute("DELETE FROM gondor.schema_migrations WHERE version = '99999999999999'")
+  end
+
   def self.pg_available?
     ActiveRecord::Base.connection.execute("SELECT 1")
     true
@@ -85,5 +141,22 @@ RSpec.describe "Citadel integration", type: :integration do
     Citadel::Realm.create("rohan")
     Citadel::Realm.migrate("gondor")
     Citadel::Realm.migrate("rohan")
+  end
+
+  def schema_migrations_table_exists?(schema)
+    result = ActiveRecord::Base.connection.select_value(<<~SQL.squish)
+      SELECT EXISTS(
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = #{ActiveRecord::Base.connection.quote(schema)}
+          AND table_name = 'schema_migrations'
+      )
+    SQL
+    ActiveRecord::Type::Boolean.new.cast(result)
+  end
+
+  def versions_in_schema(schema)
+    ActiveRecord::Base.connection.select_values(
+      "SELECT version FROM #{schema}.schema_migrations ORDER BY version"
+    )
   end
 end
