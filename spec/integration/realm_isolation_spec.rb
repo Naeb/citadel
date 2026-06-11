@@ -15,6 +15,8 @@ RSpec.describe "Citadel integration", type: :integration do
 
     skip "PostgreSQL not available" unless pg_available?
 
+    Citadel::Realm.instance_variable_set(:@adapter, nil)
+
     reset_schemas!
     migrate_public!
     create_and_migrate_realms!
@@ -129,11 +131,20 @@ RSpec.describe "Citadel integration", type: :integration do
     conn.execute("DROP SCHEMA IF EXISTS rohan CASCADE")
     conn.execute("DROP TABLE IF EXISTS public.accounts CASCADE")
     conn.execute("DROP TABLE IF EXISTS public.orders CASCADE")
-    conn.execute("DROP TABLE IF EXISTS schema_migrations")
+    conn.execute("DROP TABLE IF EXISTS public.schema_migrations CASCADE")
+    conn.execute("DROP TABLE IF EXISTS public.ar_internal_metadata CASCADE")
+
+    ActiveRecord::Base.connection_handler.clear_all_connections!
+    ActiveRecord::Base.establish_connection(:test)
+    ActiveRecord::Base.connection.schema_cache.clear!
+    Citadel::PoolManager.clear!
   end
 
   def migrate_public!
-    ActiveRecord::MigrationContext.new(ActiveRecord::Migrator.migrations_paths).migrate
+    ActiveRecord::MigrationContext.new(
+      Citadel::Realm.send(:migration_paths),
+      ActiveRecord::SchemaMigration.new(ActiveRecord::Base.connection_pool)
+    ).migrate
   end
 
   def create_and_migrate_realms!

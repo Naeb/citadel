@@ -10,7 +10,10 @@ RSpec.describe Citadel::Realm do
     described_class.instance_variable_set(:@adapter, nil)
   end
 
-  after { described_class.reset! }
+  after do
+    described_class.reset!
+    described_class.instance_variable_set(:@adapter, nil)
+  end
 
   describe ".enter" do
     it "sets realm for the block duration" do

@@ -74,12 +74,20 @@ module Citadel
           default_realm = Citadel.config.default_realm
           adapter.ensure_schema_migrations_table!(realm_name) unless realm_name.to_s == default_realm.to_s
 
-          paths = ActiveRecord::Migrator.migrations_paths
           context = ActiveRecord::MigrationContext.new(
-            paths,
+            migration_paths,
             ActiveRecord::SchemaMigration.new(ActiveRecord::Base.connection_pool)
           )
           context.migrate
+        end
+      end
+
+      def migration_paths
+        ActiveRecord::Migrator.migrations_paths.map do |path|
+          next path if Pathname.new(path).absolute?
+          next Rails.root.join(path).to_s if defined?(Rails::Application) && Rails.application
+
+          path
         end
       end
 

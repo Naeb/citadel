@@ -11,7 +11,7 @@ Bundler.require(*Rails.groups)
 
 module Dummy
   class Application < Rails::Application
-    config.load_defaults 8.0
+    config.load_defaults "#{Rails::VERSION::MAJOR}.#{Rails::VERSION::MINOR}"
     config.active_support.isolation_level = :fiber
     config.eager_load = false
     config.consider_all_requests_local = true

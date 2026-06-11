@@ -16,6 +16,7 @@ module Citadel
         end
         pools.clear
         handlers.clear
+        @adapter = nil
       end
 
       private
