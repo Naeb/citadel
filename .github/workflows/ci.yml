@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
 
 jobs:
@@ -25,9 +25,9 @@ jobs:
           --health-retries 5
 
     strategy:
+      fail-fast: false
       matrix:
         ruby: ["3.2", "3.3", "4.0"]
-        rails: ["7.2", "8.0"]
 
     env:
       DB_HOST: localhost
@@ -41,14 +41,8 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
+          bundler: "4.0.3"
           bundler-cache: true
-
-      - name: Install Rails ${{ matrix.rails }}
-        env:
-          BUNDLE_FROZEN: "false"
-        run: |
-          bundle config set --local frozen false
-          bundle update rails activerecord activesupport --conservative
 
       - name: Prepare dummy database
         run: |
