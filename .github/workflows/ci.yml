@@ -70,10 +70,10 @@ jobs:
 
       - name: Prepare dummy database
         env:
-          BUNDLE_GEMFILE: spec/dummy/Gemfile
           RAILS_ENV: test
         run: |
           cd spec/dummy
+          export BUNDLE_GEMFILE="$PWD/Gemfile"
           bundle config set --local frozen false
           bundle lock --update rails
           bundle install
