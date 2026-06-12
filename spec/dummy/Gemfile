@@ -4,4 +4,4 @@ source "https://rubygems.org"
 
 gem "citadel", path: "../../../"
 gem "pg", "~> 1.5"
-gem "rails", ">= 7.2", "< 9"
+gem "rails", ENV.fetch("CITADEL_RAILS_CONSTRAINT", ">= 7.2, < 9")

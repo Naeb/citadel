@@ -49,6 +49,30 @@ module Citadel
         schemas.uniq.join(", ")
       end
 
+      def ensure_schema_migrations_table!(realm)
+        self.class.validate_name!(realm)
+        return if schema_migrations_table_exists?(realm)
+
+        quoted_schema = self.class.quote_schema(realm)
+        connection.execute(<<~SQL.squish)
+          CREATE TABLE #{quoted_schema}.schema_migrations (
+            version character varying NOT NULL PRIMARY KEY
+          )
+        SQL
+      end
+
+      def schema_migrations_table_exists?(realm)
+        self.class.validate_name!(realm)
+        result = connection.select_value(<<~SQL.squish)
+          SELECT EXISTS(
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = #{connection.quote(realm.to_s)}
+              AND table_name = 'schema_migrations'
+          )
+        SQL
+        ActiveRecord::Type::Boolean.new.cast(result)
+      end
+
       private
 
       def connection

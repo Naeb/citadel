@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "active_support"
+require "active_record"
 require "citadel"
 
 RSpec.configure do |config|
@@ -11,8 +12,11 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
-  config.before do
+  config.before do |example|
     Citadel::Presence.reset
+
+    next if example.metadata[:type] == :integration
+
     Citadel.instance_variable_set(:@config, Citadel::Config.new)
   end
 end

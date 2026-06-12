@@ -23,6 +23,17 @@ module Citadel
       config.freeze!
       Patches::ConnectionHandling.apply!
     end
+
+    def load_railtie!
+      return if defined?(Citadel::Railtie)
+      return unless defined?(Rails::Railtie)
+
+      require "citadel/railtie"
+    end
+
+    def ensure_activated!
+      activate! unless config.frozen?
+    end
   end
 end
 
@@ -30,4 +41,18 @@ require_relative "citadel/errors"
 require_relative "citadel/loader"
 Citadel.loader = Citadel::Loader.setup
 
-require "citadel/railtie" if defined?(Rails::Railtie)
+Citadel.load_railtie!
+
+if defined?(ActiveSupport::LazyLoadHooks)
+  require "active_support/lazy_load_hooks"
+
+  unless defined?(Citadel::Railtie)
+    ActiveSupport.on_load(:before_configuration) do
+      Citadel.load_railtie!
+    end
+  end
+
+  ActiveSupport.on_load(:after_initialize) do
+    Citadel.ensure_activated!
+  end
+end

@@ -16,6 +16,7 @@ module Citadel
         end
         pools.clear
         handlers.clear
+        @adapter = nil
       end
 
       private
@@ -34,14 +35,14 @@ module Citadel
 
       def build_pool(realm, role)
         handler = ActiveRecord::ConnectionAdapters::ConnectionHandler.new
-        handler.establish_connection(
+        pool = handler.establish_connection(
           pool_config_for(realm, role),
           owner_name: ActiveRecord::Base,
           role: role,
           shard: shard_key(realm)
         )
         handlers[pool_key(realm, role)] = handler
-        handler.connection_pool_list(role: role, shard: shard_key(realm)).first
+        pool
       end
 
       def shard_key(realm)
@@ -49,7 +50,7 @@ module Citadel
       end
 
       def pool_config_for(realm, role)
-        base = ActiveRecord::Base.connection_db_config
+        base = base_connection_db_config
         configuration = base.configuration_hash.dup
         configuration[:schema_search_path] = adapter.schema_search_path_for(realm)
         configuration[:citadel_realm] = realm.to_s
@@ -59,6 +60,15 @@ module Citadel
           "citadel_#{realm}_#{role}",
           configuration
         )
+      end
+
+      def base_connection_db_config
+        previous_realm = Citadel::Presence.realm
+        Citadel::Presence.realm = nil
+
+        ActiveRecord::Base.connection_db_config
+      ensure
+        Citadel::Presence.realm = previous_realm
       end
 
       def adapter
